@@ -56,6 +56,14 @@ local function SpellInfo(subevent, info)
   return info[12], info[13]
 end
 
+local function SourceInfo(info)
+  local name = info[5]
+  if name and name ~= "" then
+    return Ambiguate(name, "short")
+  end
+  return "未知来源"
+end
+
 local function AddMapAmount(map, key, amount, label)
   if not key then
     return
@@ -93,6 +101,11 @@ function RWC:NewPlayer(guid, name)
     takenBySpell = {},
     avoidableBySpell = {},
     missingTracked = {},
+    wclExcludedDamage = 0,
+    wclExcludedHits = 0,
+    wclWarnings = {},
+    recentDamage = {},
+    deathEvents = {},
     firstActionAt = nil,
     lastActionAt = nil,
     idleSeconds = 0,
@@ -149,6 +162,11 @@ function RWC:RecordSourceEvent(player, subevent, info, timestamp)
     local amount = DamageAmount(subevent, info)
     player.damage = player.damage + amount
     AddMapAmount(player.damageBySpell, spellId, amount, spellName)
+    if self:IsWclExcludedDamageTarget(self.combat.name, info[9]) then
+      player.wclExcludedDamage = player.wclExcludedDamage + amount
+      player.wclExcludedHits = player.wclExcludedHits + 1
+      self:AddWclWarning(player, "WCL可能排除目标伤害：" .. tostring(info[9] or "未知目标"))
+    end
     self:AddAction(player, timestamp)
   elseif HEAL_EVENTS[subevent] then
     local amount = HealAmount(info)
@@ -177,15 +195,79 @@ function RWC:RecordDestEvent(player, subevent, info)
 
   local amount = DamageAmount(subevent, info)
   local spellId, spellName = SpellInfo(subevent, info)
+  local timestamp = GetTime()
+  local sourceName = SourceInfo(info)
+  local settings = RaidWaterCheckDB and RaidWaterCheckDB.settings or self.defaults
+  local maxHits = settings.deathReplayMaxHits or 12
+  local replaySeconds = settings.deathReplaySeconds or 8
+  local avoidable = self:IsAvoidableSpell(spellId)
 
   player.damageTaken = player.damageTaken + amount
   AddMapAmount(player.takenBySpell, spellId, amount, spellName)
 
-  if self:IsAvoidableSpell(spellId) then
+  player.recentDamage[#player.recentDamage + 1] = {
+    time = timestamp,
+    source = sourceName,
+    spellId = spellId,
+    spellName = spellName or "未知技能",
+    amount = amount,
+    avoidable = avoidable,
+  }
+
+  local keepAfter = timestamp - replaySeconds
+  while #player.recentDamage > 0 and (player.recentDamage[1].time < keepAfter or #player.recentDamage > maxHits) do
+    table.remove(player.recentDamage, 1)
+  end
+
+  if avoidable then
     player.avoidableDamage = player.avoidableDamage + amount
     player.avoidableHits = player.avoidableHits + 1
     AddMapAmount(player.avoidableBySpell, spellId, amount, self:GetAvoidableSpellName(spellId, spellName))
   end
+end
+
+function RWC:RecordDeathSnapshot(player, timestamp)
+  local settings = RaidWaterCheckDB and RaidWaterCheckDB.settings or self.defaults
+  local replaySeconds = settings.deathReplaySeconds or 8
+  local maxHits = settings.deathReplayDisplayHits or 5
+  local since = timestamp - replaySeconds
+  local hits = {}
+  local killingBlow = nil
+  local maxHit = nil
+  local avoidableCount = 0
+
+  for _, hit in ipairs(player.recentDamage or {}) do
+    if hit.time >= since then
+      local copy = {
+        secondsBeforeDeath = math.max(0, timestamp - hit.time),
+        source = hit.source,
+        spellId = hit.spellId,
+        spellName = hit.spellName,
+        amount = hit.amount,
+        avoidable = hit.avoidable,
+      }
+      hits[#hits + 1] = copy
+      killingBlow = copy
+      if not maxHit or copy.amount > maxHit.amount then
+        maxHit = copy
+      end
+      if copy.avoidable then
+        avoidableCount = avoidableCount + 1
+      end
+    end
+  end
+
+  while #hits > maxHits do
+    table.remove(hits, 1)
+  end
+
+  player.deathEvents[#player.deathEvents + 1] = {
+    time = timestamp,
+    hits = hits,
+    killingBlow = killingBlow,
+    maxHit = maxHit,
+    avoidableCount = avoidableCount,
+  }
 end
 
 local function AddReason(player, text)
@@ -222,7 +304,7 @@ local function ScorePlayer(player, duration, totalDamage, totalHealing, totalTak
     contribution = math.max(contribution, player.healing / totalHealing)
   end
 
-  if player.deaths > 0 then
+  if settings.enableDeathPenalty and player.deaths > 0 then
     local penalty = math.min(35, player.deaths * 18)
     player.score = player.score - penalty
     AddReason(player, "死亡 " .. player.deaths .. " 次")
@@ -304,6 +386,7 @@ end
 function RWC:BuildReport(duration, won)
   local totalDamage, totalHealing, totalTaken = 0, 0, 0
   local rows = {}
+  local wclWarningCount = 0
 
   for _, player in pairs(self.players) do
     if player.inGroup then
@@ -316,6 +399,11 @@ function RWC:BuildReport(duration, won)
   for _, player in pairs(self.players) do
     if player.inGroup then
       ScorePlayer(player, duration, totalDamage, totalHealing, totalTaken)
+      if player.wclExcludedDamage and player.wclExcludedDamage > 0 then
+        wclWarningCount = wclWarningCount + 1
+      elseif player.wclWarnings and #player.wclWarnings > 0 then
+        wclWarningCount = wclWarningCount + 1
+      end
       table.insert(rows, player)
     end
   end
@@ -329,12 +417,16 @@ function RWC:BuildReport(duration, won)
 
   return {
     fightName = self.combat.name,
+    source = self.combat.source,
     duration = duration,
     won = won,
     rows = rows,
     totalDamage = totalDamage,
     totalHealing = totalHealing,
     totalTaken = totalTaken,
+    wclMode = self:IsWclNaxxEnabled(),
+    wclWarningCount = wclWarningCount,
+    wclRuleName = self:GetWclRuleName(self.combat.name),
     generatedAt = date("%Y-%m-%d %H:%M:%S"),
   }
 end

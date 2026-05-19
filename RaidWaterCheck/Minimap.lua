@@ -73,7 +73,7 @@ function RWC:CreateMinimapButton()
   button:SetScript("OnEnter", function(self)
     GameTooltip:SetOwner(self, "ANCHOR_LEFT")
     GameTooltip:SetText("团本划水检测", 1, 1, 1)
-    GameTooltip:AddLine("左键：查看上一场报告", 0.8, 0.9, 1)
+    GameTooltip:AddLine("左键：打开操作面板", 0.8, 0.9, 1)
     GameTooltip:AddLine("右键：打开设置", 0.8, 0.9, 1)
     GameTooltip:AddLine("拖动：移动图标", 0.8, 0.9, 1)
     GameTooltip:Show()
@@ -83,10 +83,8 @@ function RWC:CreateMinimapButton()
   button:SetScript("OnClick", function(_, mouseButton)
     if mouseButton == "RightButton" then
       RWC:ShowSettings()
-    elseif RWC.lastReport then
-      RWC:ShowReport(RWC.lastReport)
     else
-      RWC.Print("还没有报告。右键小地图图标可打开设置。")
+      RWC:ShowMainFrame()
     end
   end)
 
@@ -129,11 +127,8 @@ end)
 function RaidWaterCheck_OnAddonCompartmentClick(_, mouseButton)
   if mouseButton == "RightButton" then
     RWC:ShowSettings()
-  elseif RWC.lastReport then
-    RWC:ShowReport(RWC.lastReport)
   else
-    RWC:ShowSettings()
-    RWC.Print("还没有报告，已打开设置。")
+    RWC:ShowMainFrame()
   end
 end
 
@@ -145,7 +140,7 @@ function RaidWaterCheck_OnAddonCompartmentEnter(addonName, button)
 
   GameTooltip:SetOwner(owner, "ANCHOR_LEFT")
   GameTooltip:SetText("团本划水检测", 1, 1, 1)
-  GameTooltip:AddLine("左键：查看上一场报告", 0.8, 0.9, 1)
+  GameTooltip:AddLine("左键：打开操作面板", 0.8, 0.9, 1)
   GameTooltip:AddLine("右键：打开设置", 0.8, 0.9, 1)
   GameTooltip:Show()
 end

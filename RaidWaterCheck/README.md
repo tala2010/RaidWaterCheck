@@ -27,6 +27,9 @@ World of Warcraft/_retail_/Interface/AddOns/RaidWaterCheck
 
 ```text
 /rwc show   显示上一场报告
+/rwc menu   打开操作面板
+/rwc summary 显示当前/上一轮副本总结
+/rwc endrun  手动结束当前副本会话并显示总结
 /rwc options 打开可视化设置
 /rwc announce 通报低分异常到队伍/团队频道
 /rwc rules  查看当前可规避伤害规则
@@ -38,13 +41,14 @@ World of Warcraft/_retail_/Interface/AddOns/RaidWaterCheck
 /rwc auto   切换战斗结束后自动弹报告
 /rwc trash  切换是否记录小怪/非Boss战
 /rwc reset  重置统计
+/rwc demo   生成演示记录，用来测试报告和总结排版
 /rwc start  手动开始测试
 /rwc stop   手动结束测试
 ```
 
 ## 可视化设置
 
-输入 `/rwc options` 可以打开设置窗口，设置分为“基础设置”和“高级设置”两个页签，目前可调整：
+输入 `/rwc options` 可以打开设置窗口，设置分为“基础设置”“高级设置”“权重设置”三个页签，目前可调整：
 
 - 是否战斗结束后自动弹报告
 - 是否记录小怪/非 Boss 战
@@ -61,10 +65,13 @@ World of Warcraft/_retail_/Interface/AddOns/RaidWaterCheck
 - 高承伤占比阈值
 - 可规避伤害扣分
 - 缺失关键技能扣分
+- 是否启用 NAXX/WCL 冲分参考提示
 
 ## 当前会统计
 
 默认只记录 Boss 战。打开“也记录小怪/非Boss战”后，插件才会记录普通进战斗到脱战的战斗。
+
+插件会把同一个副本会话内的多个 Boss 战整合成副本总结。第一个 Boss 开始时自动开启副本会话；离开副本时自动生成总结，也可以输入 `/rwc endrun` 手动结束，或输入 `/rwc summary` 随时查看当前总结。
 
 - 伤害量
 - 有效治疗量
@@ -77,7 +84,9 @@ World of Warcraft/_retail_/Interface/AddOns/RaidWaterCheck
 - 可规避伤害次数和金额
 - 自定义关键技能缺失检查
 - 个人详情页，点击报告里的玩家即可打开
+- 副本总结页，整合多个 Boss 的平均分、最低分、总死亡、总可规避伤害、打断驱散和主要异常
 - 综合异常分数
+- NAXX/WCL 冲分参考提示：标记可能不计入 WCL 排名的目标伤害或特殊 Buff
 
 ## 可规避伤害规则
 
@@ -90,6 +99,12 @@ World of Warcraft/_retail_/Interface/AddOns/RaidWaterCheck
 ```
 
 添加后，之后战斗里吃到这个技能的玩家会记录为“可规避伤害”，并按设置窗口里的扣分规则扣分。
+
+## NAXX/WCL 参考
+
+基础设置里可以启用“NAXX/WCL 冲分参考提示”。开启后，插件会在 NAXX Boss 战里额外标记部分 WCL 规则可能排除的小怪伤害，以及 Battle Squawk、Fungal Bloom、Silithyst、塔迪乌斯正/负极电荷等可能影响冲分判断的 Buff。
+
+这个模式不会替代 WCL 官方结算，也不会改变团长复盘分数；它只是在游戏内提醒“这部分数据上传 WCL 后可能不是有效冲分数据”。最终排名仍以 Warcraft Logs 上传后的官方解析为准。
 
 ## 右上角入口
 

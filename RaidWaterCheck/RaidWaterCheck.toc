@@ -4,7 +4,7 @@
 ## Notes: Lightweight raid performance anomaly report after encounters.
 ## Notes-zhCN: 团本战斗结束后生成轻量划水/异常表现报告。
 ## Author: Codex
-## Version: 0.1.0
+## Version: 1.0.0
 ## SavedVariables: RaidWaterCheckDB
 ## IconTexture: Interface\Icons\Ability_Rogue_FindWeakness
 ## AddonCompartmentFunc: RaidWaterCheck_OnAddonCompartmentClick

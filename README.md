@@ -13,7 +13,8 @@
 - 点击玩家查看个人详情
 - 支持右上角插件集合入口和小地图备用按钮
 - 支持手动通报异常玩家到团队/队伍频道
-- 可视化设置面板，包含基础设置和高级设置
+- 可视化设置面板，包含基础设置、高级设置和权重设置
+- 可选 NAXX/WCL 冲分参考提示，标记可能不计入 WCL 排名的目标伤害或特殊 Buff
 
 ## 安装
 
@@ -30,9 +31,11 @@ World of Warcraft/_retail_/Interface/AddOns/RaidWaterCheck
 ```text
 /rwc
 /huashui
+/rwc menu
 /rwc show
 /rwc options
 /rwc announce
+/rwc demo
 /rwc trash
 /rwc rules
 /rwc avoid add 技能ID 技能名
@@ -45,6 +48,12 @@ World of Warcraft/_retail_/Interface/AddOns/RaidWaterCheck
 ## 说明
 
 插件定位是“复盘辅助”，不是自动定罪工具。DPS 低可能来自机制分工、转火、跑位、死亡、装等、职业环境或团队策略，需要结合实际战斗判断。
+
+调试界面时可以输入 `/rwc demo` 生成一份虚拟副本记录，用于查看单场报告、副本总结、Boss 展开和个人详情的排版。
+
+右上角插件集合入口和小地图按钮左键会打开操作面板，里面可以直接点单场报告、副本总结、设置、演示数据和清除记录；命令仍然保留。
+
+NAXX/WCL 参考模式只做游戏内提示，不等同于 Warcraft Logs 官方结算。WCL 最终仍以上传后的日志和官方规则为准。
 
 ## 合规
 
